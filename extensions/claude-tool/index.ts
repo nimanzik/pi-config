@@ -906,36 +906,17 @@ export default function (pi: ExtensionAPI) {
 
 			const totalTokens = countTokensApprox(fullText);
 
-			// Write to file instead of returning inline
-			if (outputFile) {
-				try {
-					const outPath = outputFile.startsWith("/")
-						? outputFile
-						: join(ctx.cwd, outputFile);
-					const outDir = join(outPath, "..");
-					mkdirSync(outDir, { recursive: true });
-					writeFileSync(outPath, fullText);
-
-					const summary =
-						`Result written to ${outputFile} (~${totalTokens} tokens, ${formatSize(Buffer.byteLength(fullText))}).\n` +
-						`Session: ${sessionId}`;
-
-					return {
-						content: [{ type: "text", text: summary }],
-						details: {
-							cost,
-							turns,
-							sessionId,
-							sessionModel,
-							elapsed,
-							tokens: totalTokens,
-							toolUses,
-							outputFile,
-						},
-					};
-				} catch (err: any) {
-					// Fall through to inline return if write fails
-				}
+			// Always write output to a file — use explicit outputFile or auto-generate one
+			const resolvedOutputFile = outputFile ?? `.pi/claude-${sessionId || Date.now()}.md`;
+			try {
+				const outPath = resolvedOutputFile.startsWith("/")
+					? resolvedOutputFile
+					: join(ctx.cwd, resolvedOutputFile);
+				const outDir = join(outPath, "..");
+				mkdirSync(outDir, { recursive: true });
+				writeFileSync(outPath, fullText);
+			} catch {
+				// If file write fails, we still return the output inline below
 			}
 
 			const truncation = truncateHead(fullText, {
@@ -948,6 +929,28 @@ export default function (pi: ExtensionAPI) {
 				resultText += `\n\n[Output truncated: ${truncation.outputLines} of ${truncation.totalLines} lines (${formatSize(truncation.outputBytes)} of ${formatSize(truncation.totalBytes)})]`;
 			}
 
+			// When outputFile was explicitly provided, return summary instead of inline text
+			if (outputFile) {
+				const summary =
+					`Result written to ${outputFile} (~${totalTokens} tokens, ${formatSize(Buffer.byteLength(fullText))}).\n` +
+					`Session: ${sessionId}`;
+
+				return {
+					content: [{ type: "text", text: summary }],
+					details: {
+						cost,
+						turns,
+						sessionId,
+						sessionModel,
+						elapsed,
+						tokens: totalTokens,
+						toolUses,
+						outputFile,
+						outputFileExplicit: true,
+					},
+				};
+			}
+
 			return {
 				content: [{ type: "text", text: resultText }],
 				details: {
@@ -958,6 +961,7 @@ export default function (pi: ExtensionAPI) {
 					elapsed,
 					tokens: totalTokens,
 					toolUses,
+					outputFile: resolvedOutputFile,
 					truncated: truncation.truncated,
 				},
 			};
@@ -1088,7 +1092,8 @@ export default function (pi: ExtensionAPI) {
 				header += "\n" + theme.fg("dim", `  session: ${details.sessionId}`);
 			}
 
-			if (details?.outputFile) {
+			// When the caller explicitly set outputFile, the content is a short summary — just show header
+			if (details?.outputFileExplicit) {
 				return new Text(header, 0, 0);
 			}
 
