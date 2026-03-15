@@ -4,7 +4,7 @@ export function isCmuxAvailable(): boolean {
   return !!process.env.CMUX_SOCKET_PATH;
 }
 
-function shellEscape(s: string): string {
+export function shellEscape(s: string): string {
   return "'" + s.replace(/'/g, "'\\''") + "'";
 }
 
@@ -79,11 +79,15 @@ export async function pollForExit(
 
     await new Promise<void>((resolve, reject) => {
       if (signal.aborted) return reject(new Error("Aborted"));
-      const timer = setTimeout(resolve, options.interval);
-      signal.addEventListener("abort", () => {
+      const timer = setTimeout(() => {
+        signal.removeEventListener("abort", onAbort);
+        resolve();
+      }, options.interval);
+      function onAbort() {
         clearTimeout(timer);
         reject(new Error("Aborted"));
-      }, { once: true });
+      }
+      signal.addEventListener("abort", onAbort, { once: true });
     });
   }
 }

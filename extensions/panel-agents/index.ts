@@ -7,6 +7,7 @@ import {
   sendCommand,
   pollForExit,
   closeSurface,
+  shellEscape,
 } from "./cmux.ts";
 import {
   getLeafId,
@@ -29,10 +30,6 @@ const PanelAgentParams = Type.Object({
   skills: Type.Optional(Type.String({ description: "Comma-separated skills to load" })),
   tools: Type.Optional(Type.String({ description: "Comma-separated tools to enable" })),
 });
-
-function shellEscape(s: string): string {
-  return "'" + s.replace(/'/g, "'\\''") + "'";
-}
 
 function formatElapsed(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;

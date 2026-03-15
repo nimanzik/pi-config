@@ -85,7 +85,7 @@ export function appendBranchSummary(
     id,
     parentId: branchPointId,
     timestamp: new Date().toISOString(),
-    fromId,
+    fromId: fromId ?? branchPointId,
     summary,
   };
   appendFileSync(sessionFile, JSON.stringify(entry) + "\n", "utf8");
