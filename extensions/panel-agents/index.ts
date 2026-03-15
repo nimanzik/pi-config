@@ -199,12 +199,14 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
           parts.push("-e", shellEscape(panelDonePath));
         }
 
-        // Skills are loaded via /skill:name in the user message (inline expansion).
-        // We need skill discovery enabled for /skill:name to resolve, so only
-        // pass --no-skills when there are no skills to load.
-        if (!effectiveSkills) {
+        if (effectiveSkills) {
+          // Explicit skills: disable discovery, load via /skill:name in the message
+          parts.push("--no-skills");
+        } else if (params.agent) {
+          // Agent specified but no skills in its definition: disable discovery
           parts.push("--no-skills");
         }
+        // No skills AND no agent: let auto-discovery run (full session replica)
 
         if (effectiveModel) {
           const model = effectiveThinking
