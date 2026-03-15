@@ -1,3 +1,12 @@
+---
+name: plan
+description: >
+  Panel-based planning workflow. Spawns an interactive planner sub-agent
+  in a cmux panel with shared session context. Use when asked to "plan",
+  "brainstorm", "I want to build X", or "let's design". Requires the
+  panel-agents extension and cmux.
+---
+
 # Plan
 
 A panel-based planning workflow that offloads brainstorming and plan creation to a dedicated interactive panel, keeping the main session clean for orchestration.
