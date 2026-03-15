@@ -91,21 +91,25 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
         // Wait for surface to initialize
         await new Promise<void>((resolve) => setTimeout(resolve, 500));
 
-        // Build system prompt — must be VERY explicit so the agent doesn't get confused
-        // by seeing the full session history (including the tool call that spawned it)
+        // Build the task message with preamble baked in.
+        // In a long session, --append-system-prompt gets buried and ignored.
+        // Putting the preamble in the user message ensures it's the last thing
+        // the agent sees and actually responds to.
         const preamble =
-          "=== IMPORTANT: YOU ARE A SUB-AGENT SESSION ===\n" +
-          "You were spawned by the main session's panel_agent tool into a dedicated cmux panel.\n" +
-          "The conversation history you see is CONTEXT from the parent session — do NOT continue it.\n" +
-          "You are starting fresh with the task below. Focus on YOUR task, not the parent conversation.\n" +
-          "You only have built-in tools (read, bash, edit, write). Do NOT call panel_agent, subagent, or other extension tools.\n" +
-          `${interactive ? "The user will interact with you in this panel. When done, they will exit with Ctrl+D." : "Complete your task and provide a summary."}\n` +
-          "=== END PREAMBLE ===";
+          "=== YOU ARE A SUB-AGENT SESSION ===\n" +
+          "You were spawned into a dedicated panel by the main session.\n" +
+          "The conversation history above is CONTEXT — do NOT continue it.\n" +
+          "Start fresh with the task below.\n" +
+          "You only have built-in tools (read, bash, edit, write).\n" +
+          `${interactive ? "The user will interact with you here. When done, they exit with Ctrl+D." : "Complete your task autonomously."}\n` +
+          "===";
         const summaryInstruction =
-          "Your FINAL message should be a clear summary of what you accomplished.";
-        const fullSystemPrompt = params.systemPrompt
-          ? `${preamble}\n\n${params.systemPrompt}\n\n${summaryInstruction}`
-          : `${preamble}\n\n${summaryInstruction}`;
+          "Your FINAL message should summarize what you accomplished.";
+        const roleBlock = params.systemPrompt
+          ? `\n\nYour role:\n${params.systemPrompt}`
+          : "";
+        const fullTask =
+          `${preamble}${roleBlock}\n\nTask:\n${params.task}\n\n${summaryInstruction}`;
 
         // Build pi command
         const parts: string[] = ["pi"];
@@ -113,15 +117,12 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
         parts.push("--no-extensions");
 
         if (params.skills) {
-          // Replace --no-skills with explicit --skill flags
           for (const skill of params.skills.split(",").map((s) => s.trim()).filter(Boolean)) {
             parts.push("--skill", shellEscape(skill));
           }
         } else {
           parts.push("--no-skills");
         }
-
-        parts.push("--append-system-prompt", shellEscape(fullSystemPrompt));
 
         if (params.model) {
           parts.push("--model", shellEscape(params.model));
@@ -135,7 +136,7 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
           parts.push("-p");
         }
 
-        parts.push(shellEscape(params.task));
+        parts.push(shellEscape(fullTask));
 
         const piCommand = parts.join(" ");
         const command = `${piCommand}; echo '__PANEL_DONE_'$?'__'`;
