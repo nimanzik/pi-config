@@ -94,9 +94,9 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
         // the agent sees and actually responds to.
         const modeHint = interactive
           ? "The user will interact with you here. When done, they will exit with Ctrl+D."
-          : "Complete your task autonomously.";
+          : "Complete your task autonomously. When finished, call the panel_done tool to close this session.";
         const summaryInstruction =
-          "Your FINAL message should summarize what you accomplished.";
+          "Your FINAL assistant message (before calling panel_done or before the user exits) should summarize what you accomplished.";
         const roleBlock = params.systemPrompt
           ? `\n\n${params.systemPrompt}`
           : "";
@@ -112,7 +112,11 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
         parts.push("--session-dir", shellEscape(dirname(sessionFile)));
         parts.push("--no-extensions");
 
-        // Load specific extensions (e.g. session-artifacts for write_artifact)
+        // Always load panel-done extension so autonomous agents can self-terminate
+        const panelDonePath = join(dirname(new URL(import.meta.url).pathname), "panel-done.ts");
+        parts.push("-e", shellEscape(panelDonePath));
+
+        // Load additional extensions (e.g. session-artifacts for write_artifact)
         if (params.extensions) {
           for (const ext of params.extensions.split(",").map((s) => s.trim()).filter(Boolean)) {
             parts.push("-e", shellEscape(ext));
@@ -135,10 +139,9 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
           parts.push("--tools", shellEscape(params.tools));
         }
 
-        if (!interactive) {
-          parts.push("-p");
-        }
-
+        // Never use -p. All agents run in interactive mode so the user can
+        // watch progress in real-time. Autonomous agents call panel_done to
+        // self-terminate. Interactive agents wait for user Ctrl+D.
         parts.push(shellEscape(fullTask));
 
         const piCommand = parts.join(" ");
