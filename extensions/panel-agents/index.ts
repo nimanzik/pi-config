@@ -12,11 +12,8 @@ import {
   shellEscape,
 } from "./cmux.ts";
 import {
-  getLeafId,
-  getEntryCount,
   getNewEntries,
   findLastAssistantMessage,
-  appendBranchSummary,
 } from "./session.ts";
 
 const PanelAgentParams = Type.Object({
@@ -83,9 +80,6 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
       let surface: string | null = null;
 
       try {
-        // Record branch point before sub-agent writes
-        const branchPointId = getLeafId(sessionFile);
-        const entryCount = getEntryCount(sessionFile);
 
         // Create cmux surface
         surface = createSurface(params.name);
@@ -171,16 +165,11 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
           .filter((f) => f.endsWith(".jsonl"))
           .map((f) => ({ name: f, path: join(sessionDir, f), mtime: statSync(join(sessionDir, f)).mtimeMs }))
           .sort((a, b) => b.mtime - a.mtime);
-        // The sub-agent's file is the newest one that isn't the main session
         const subSessionFile = sessionFiles.find((f) => f.path !== sessionFile);
 
         let summary: string;
-        let lastEntryId: string | null = null;
-
         if (subSessionFile) {
           const allEntries = getNewEntries(subSessionFile.path, 0);
-          const lastEntry = allEntries.length > 0 ? allEntries[allEntries.length - 1] : null;
-          lastEntryId = lastEntry?.id ?? null;
           summary =
             findLastAssistantMessage(allEntries) ??
             (exitCode !== 0
@@ -190,11 +179,6 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
           summary = exitCode !== 0
             ? `Sub-agent exited with code ${exitCode}`
             : "Sub-agent exited without output";
-        }
-
-        // Append branch summary to the MAIN session file for /tree visibility
-        if (branchPointId) {
-          appendBranchSummary(sessionFile, branchPointId, lastEntryId ?? branchPointId, summary);
         }
 
         // Close surface
@@ -210,11 +194,10 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
           content: [{ type: "text", text: resultText }],
           details: {
             name: params.name,
+            sessionFile: subSessionFile?.path,
             interactive,
             exitCode,
             elapsed,
-            entriesAdded: 0,
-            branchPoint: branchPointId,
           },
         };
       } catch (err: any) {
