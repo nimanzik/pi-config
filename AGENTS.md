@@ -237,6 +237,19 @@ panel_agent({ name: "Worker", agent: "worker", model: "anthropic/claude-haiku-4-
 
 Always pass the extensions needed for the tools the agent uses. Agent `.md` files define which tools are needed — check `tools:` in the frontmatter.
 
+**Iterate pattern** — for quick fixes and ad-hoc work after a big implementation. The user branches off into a focused panel, fixes a bug or makes a change, then comes back with just the summary. Keeps the main session's context clean.
+
+```typescript
+panel_agent({
+  name: "Iterate",
+  interactive: true,
+  extensions: "~/.pi/agent/extensions/session-artifacts.ts,~/.pi/agent/extensions/todos.ts",
+  task: "[describe the bug or change needed]. Context: [what was just built]"
+})
+```
+
+Use this when the user says "let me fix this real quick", "iterate on this", or when they want to do focused work without polluting the main session's context.
+
 **Panel agents vs subagents:** Panel agents = visible, interactive possible. Subagents = background, headless. Both read the same agent definitions.
 
 #### When to Delegate

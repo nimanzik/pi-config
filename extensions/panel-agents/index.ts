@@ -191,7 +191,9 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
         // Load additional extensions (e.g. session-artifacts for write_artifact)
         if (params.extensions) {
           for (const ext of params.extensions.split(",").map((s) => s.trim()).filter(Boolean)) {
-            parts.push("-e", shellEscape(ext));
+            // Expand ~ to homedir — shell won't expand it inside single quotes
+            const resolved = ext.startsWith("~") ? join(homedir(), ext.slice(1)) : ext;
+            parts.push("-e", shellEscape(resolved));
           }
         }
 
