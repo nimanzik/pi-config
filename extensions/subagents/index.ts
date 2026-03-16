@@ -11,6 +11,8 @@ import {
   pollForExit,
   closeSurface,
   shellEscape,
+  renameCurrentTab,
+  renameWorkspace,
 } from "./cmux.ts";
 import {
   getNewEntries,
@@ -231,8 +233,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         parts.push(`@${taskFile}`);
 
         const piCommand = parts.join(" ");
-        // Set SUBAGENT_NAME env var so subagent-done.ts can set the terminal title
-        const command = `SUBAGENT_NAME=${shellEscape(params.name)} ${piCommand}; rm -f ${shellEscape(taskFile)}; echo '__SUBAGENT_DONE_'$?'__'`;
+        const command = `${piCommand}; rm -f ${shellEscape(taskFile)}; echo '__SUBAGENT_DONE_'$?'__'`;
 
         // Send to surface
         sendCommand(surface, command);
@@ -496,6 +497,40 @@ export default function subagentsExtension(pi: ExtensionAPI) {
     },
   });
 
+  // set_tab_title tool — update the current cmux tab title and workspace
+  pi.registerTool({
+    name: "set_tab_title",
+    label: "Set Tab Title",
+    description:
+      "Update the current cmux tab and workspace title. Use to show progress during multi-phase workflows " +
+      "(e.g. planning, executing todos, reviewing). Keep titles short and informative.",
+    parameters: Type.Object({
+      title: Type.String({ description: "New tab title (also applied to the workspace sidebar)" }),
+    }),
+
+    async execute(_toolCallId, params) {
+      if (!isCmuxAvailable()) {
+        return {
+          content: [{ type: "text", text: "cmux not available — title not set." }],
+          details: { error: "cmux not available" },
+        };
+      }
+      try {
+        renameCurrentTab(params.title);
+        renameWorkspace(params.title);
+        return {
+          content: [{ type: "text", text: `Title set to: ${params.title}` }],
+          details: { title: params.title },
+        };
+      } catch (err: any) {
+        return {
+          content: [{ type: "text", text: `Failed to set title: ${err?.message}` }],
+          details: { error: err?.message },
+        };
+      }
+    },
+  });
+
   // /iterate command — fork the session into an interactive subagent
   pi.registerCommand("iterate", {
     description: "Fork session into an interactive subagent for focused work (bugfixes, iteration)",
@@ -542,6 +577,17 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       if (!task) {
         ctx.ui.notify("Usage: /plan <what to build>", "warning");
         return;
+      }
+
+      // Rename workspace and tab to show this is a planning session
+      if (isCmuxAvailable()) {
+        try {
+          const label = task.length > 40 ? task.slice(0, 40) + "…" : task;
+          renameWorkspace(`🎯 ${label}`);
+          renameCurrentTab(`🎯 Plan: ${label}`);
+        } catch {
+          // non-critical — don't block the plan
+        }
       }
 
       // Load the plan skill from the subagents extension directory

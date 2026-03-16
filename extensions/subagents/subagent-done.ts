@@ -7,14 +7,6 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi: ExtensionAPI) {
-  // Set terminal title from SUBAGENT_NAME env var
-  pi.on("session_start", async (_event, ctx) => {
-    const name = process.env.SUBAGENT_NAME;
-    if (name && ctx.hasUI) {
-      ctx.ui.setTitle(`π ${name}`);
-    }
-  });
-
   pi.registerTool({
     name: "subagent_done",
     label: "Subagent Done",

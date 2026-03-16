@@ -9,18 +9,47 @@ export function shellEscape(s: string): string {
 }
 
 /**
- * Create a new cmux terminal surface. Returns the surface ref (e.g. "surface:42").
+ * Create a new cmux terminal as a right split and set its tab title.
+ * The subagent appears side-by-side with the orchestrator.
+ * Returns the surface ref (e.g. "surface:42").
  */
 export function createSurface(name: string): string {
-  const out = execSync(`cmux new-surface --type terminal --name ${shellEscape(name)}`, {
+  const out = execSync(`cmux new-split right`, {
     encoding: "utf8",
   }).trim();
-  // Output: "OK surface:42 pane:42 workspace:3"
+  // Output: "OK surface:42 workspace:3"
   const match = out.match(/surface:\d+/);
   if (!match) {
-    throw new Error(`Unexpected cmux new-surface output: ${out}`);
+    throw new Error(`Unexpected cmux new-split output: ${out}`);
   }
-  return match[0];
+  const surface = match[0];
+  // Rename the tab so the subagent name is visible
+  execSync(`cmux rename-tab --surface ${shellEscape(surface)} ${shellEscape(name)}`, {
+    encoding: "utf8",
+  });
+  // Focus the new split so the user doesn't accidentally type in the orchestrator
+  execSync(`cmux focus-panel --panel ${shellEscape(surface)}`, {
+    encoding: "utf8",
+  });
+  return surface;
+}
+
+/**
+ * Rename the current tab (the one running this process).
+ * Explicitly passes CMUX_SURFACE_ID so it works even when the tab isn't focused.
+ */
+export function renameCurrentTab(title: string): void {
+  const surfaceId = process.env.CMUX_SURFACE_ID;
+  if (!surfaceId) throw new Error("CMUX_SURFACE_ID not set");
+  execSync(`cmux rename-tab --surface ${shellEscape(surfaceId)} ${shellEscape(title)}`, { encoding: "utf8" });
+}
+
+/**
+ * Rename the current workspace (sidebar entry).
+ * Uses CMUX_WORKSPACE_ID from env automatically.
+ */
+export function renameWorkspace(title: string): void {
+  execSync(`cmux workspace-action --action rename --title ${shellEscape(title)}`, { encoding: "utf8" });
 }
 
 /**
