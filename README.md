@@ -34,8 +34,6 @@ cd ~/.pi/agent && git pull
 ## Architecture
 
 This config uses **panel agents** — visible pi sessions spawned in [cmux](https://github.com/nicobailon/cmux) terminal panels. Each panel agent is a full pi session with its own identity, tools, and skills. The user can watch agents work in real-time and interact when needed.
-
-
 ### Key Concepts
 
 - **Panel agents** — visible cmux panels running pi. Autonomous agents self-terminate via `panel_done`. Interactive agents wait for the user.
@@ -64,7 +62,7 @@ Loaded on-demand when the context matches.
 
 | Skill | When to Load |
 |-------|-------------|
-| **plan** | Planning a feature — orchestrates planner panel → workers → reviewer |
+
 | **commit** | Making git commits (mandatory for every commit) |
 | **code-simplifier** | Simplifying or cleaning up code |
 | **frontend-design** | Building web components, pages, or apps |
