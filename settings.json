@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.58.3",
+  "lastChangelogVersion": "0.58.4",
   "defaultProvider": "anthropic",
   "defaultModel": "claude-opus-4-6",
   "defaultThinkingLevel": "medium",
@@ -7,18 +7,15 @@
     "git:github.com/nicobailon/pi-mcp-adapter",
     {
       "source": "git:github.com/HazAT/pi-smart-sessions",
-      "extensions": [
-        "+extensions/smart-sessions.ts"
-      ]
+      "extensions": ["+extensions/smart-sessions.ts"]
     },
     {
       "source": "git:github.com/HazAT/pi-parallel",
-      "extensions": [
-        "+extension/index.ts"
-      ]
+      "extensions": ["+extension/index.ts"]
     },
     "git:github.com/pasky/chrome-cdp-skill",
-    "git:github.com/HazAT/glimpse"
+    "git:github.com/HazAT/glimpse",
+    "git:github.com/HazAT/pi-interactive-subagents"
   ],
   "hideThinkingBlock": false,
   "extensions": [
