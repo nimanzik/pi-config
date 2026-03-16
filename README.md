@@ -29,118 +29,99 @@ cd ~/.pi/agent && ./setup.sh
 cd ~/.pi/agent && git pull
 ```
 
-That's it. Extensions, skills, agents, and prompts update instantly.
+---
 
-### What setup.sh does
+## Architecture
 
-1. Creates `settings.json` with the right packages (if it doesn't exist)
-2. Installs all git packages via `pi install` (see [Packages](#packages) below)
-3. Runs `npm install` for extensions with dependencies (claude-tool)
+This config uses **panel agents** — visible pi sessions spawned in [cmux](https://github.com/nicobailon/cmux) terminal panels. Each panel agent is a full pi session with its own identity, tools, and skills. The user can watch agents work in real-time and interact when needed.
+
+Agent definitions live in `agents/*.md` with YAML frontmatter (model, tools, thinking level) and a markdown body that defines the agent's identity and workflow. The same `.md` files are used by both the panel-agents extension and the pi-subagents package.
+
+### Key Concepts
+
+- **Panel agents** — visible cmux panels running pi. Autonomous agents self-terminate via `panel_done`. Interactive agents wait for the user.
+- **Agent definitions** (`agents/*.md`) — one source of truth for model, tools, skills, and identity per role.
+- **Plan workflow** — `/plan` spawns an interactive planner panel, then orchestrates workers and reviewers.
+- **Iterate pattern** — `/iterate` forks the session into a panel for quick fixes without polluting the main context.
 
 ---
 
-## What's Included
+## Agents
 
-### Agents
-
-Specialized subagents for delegated workflows, powered by `pi-subagents`.
+Specialized roles with baked-in identity, workflow, and review rubrics.
 
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| **scout** | Haiku | Fast codebase reconnaissance — gathers context without making changes |
-| **worker** | Sonnet 4.6 | Implements tasks from todos, commits with polished messages, closes todos |
-| **reviewer** | Codex 5.3 | Reviews code for quality and security using the shared review-rubric skill |
-| **researcher** | Sonnet 4.6 → Claude Code | Deep research using Claude Code — web research, code analysis, technical exploration |
-| **visual-tester** | Sonnet 4.6 | Visual QA — navigates web UIs via Chrome CDP, spots issues, tests interactions |
+| **planner** | Opus 4.6 | Interactive brainstorming — clarify, explore, validate design, write plan, create todos |
+| **scout** | Haiku 4.5 | Fast codebase reconnaissance — gathers context without making changes |
+| **worker** | Sonnet 4.6 | Implements tasks from todos, commits with polished messages |
+| **reviewer** | Opus 4.6 | Reviews code for quality, security, correctness (review rubric baked in) |
+| **researcher** | Sonnet 4.6 | Deep research using parallel.ai tools + Claude Code for code analysis |
+| **visual-tester** | Sonnet 4.6 | Visual QA — navigates web UIs via Chrome CDP, spots issues, produces reports |
 
-### Skills
+## Skills
 
 Loaded on-demand when the context matches.
 
 | Skill | When to Load |
 |-------|-------------|
-| **brainstorm** | Planning a new feature — full flow: investigate → clarify → explore → validate → plan → todos → execute |
-| **code-simplifier** | Simplifying or cleaning up code |
+| **plan** | Planning a feature — orchestrates planner panel → workers → reviewer |
 | **commit** | Making git commits (mandatory for every commit) |
+| **code-simplifier** | Simplifying or cleaning up code |
 | **frontend-design** | Building web components, pages, or apps |
 | **github** | Working with GitHub via `gh` CLI |
 | **learn-codebase** | Onboarding to a new project, checking conventions |
-| **review-rubric** | Shared review guidelines — used by `/review` and the reviewer agent |
 | **session-reader** | Reading and analyzing pi session JSONL files |
 | **skill-creator** | Scaffolding new agent skills |
-| **tmux** | Driving interactive CLIs via tmux |
-| **presentation-creator** | Creating data-driven presentation slides with React, Vite, and Recharts |
-| **glimpse** | Showing native macOS UI — dialogs, forms, charts, floating widgets |
-| **visual-tester** | Visual testing web UIs with Chrome CDP |
+| **cmux** | Managing terminal sessions via cmux |
+| **presentation-creator** | Creating data-driven presentation slides |
+| **add-mcp-server** | Adding MCP server configurations |
 
-### Extensions
+## Extensions
 
 | Extension | What it provides |
 |-----------|------------------|
+| **panel-agents/** | `panel_agent` tool + `/plan`, `/panel`, `/iterate` commands — spawns agents in cmux panels |
 | **answer.ts** | `/answer` command + `Ctrl+.` — extracts questions into interactive Q&A UI |
-| **branch.ts** | Branch management utilities |
-| **claude-tool/** | `claude` tool — invoke Claude Code for web research, autonomous tasks. Streams results live |
-| **cost.ts** | `/cost` command — API cost summary across sessions and models |
-| **execute-command.ts** | `execute_command` tool — lets the agent self-invoke `/answer`, `/reload`, etc. |
+| **claude-tool/** | `claude` tool — invoke Claude Code for autonomous tasks |
+| **execute-command.ts** | `execute_command` tool — lets the agent self-invoke slash commands |
+| **session-artifacts.ts** | `write_artifact` tool — session-scoped artifact storage |
+| **todos.ts** | `/todos` command + `todo` tool — file-based todo management |
+| **cost.ts** | `/cost` command — API cost summary |
+| **cmux/** | cmux integration — notifications, sidebar, workspace tools |
 | **ghostty.ts** | Ghostty terminal title + progress bar integration |
-| **review.ts** | `/review` + `/end-review` — code review for PRs, branches, commits, or uncommitted changes |
-| **todos.ts** | `/todos` command + `todo` tool — file-based todo management with locking and TUI |
 | **watchdog.ts** | Monitors agent behavior |
-
-### AGENTS.md
-
-[`AGENTS.md`](AGENTS.md) defines core principles (proactive mindset, keep it simple, read before edit, verify before done, etc.), agent delegation patterns, skill triggers, and commit strategy.
-
-### Packages
-
-Installed via `pi install` and managed in `settings.json`.
-
-| Package | Description |
-|---------|-------------|
-| [pi-subagents](https://github.com/HazAT/pi-subagents) | `subagent` tool for delegating tasks to specialized agents |
-| [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) | MCP server integration |
-| [pi-smart-sessions](https://github.com/HazAT/pi-smart-sessions) | AI-generated session names |
-| [pi-parallel](https://github.com/HazAT/pi-parallel) | Parallel web search, extract, research, and enrich tools |
-| [glimpse](https://github.com/HazAT/glimpse) | Native macOS UI from scripts — dialogs, forms, visualizations, floating widgets |
-| [pi-cmux](https://github.com/sasha-computer/pi-cmux) | cmux integration — context-aware notifications, sidebar status, browser/workspace tools |
-
----
 
 ## Commands
 
-| Command | Shortcut | Description |
-|---------|----------|-------------|
-| `/answer` | `Ctrl+.` | Extract questions into interactive Q&A |
-| `/review` | — | Code review (PR, branch, commit, uncommitted) |
-| `/end-review` | — | Complete review and return to original session |
-| `/todos` | — | Visual todo manager |
-| `/cost` | — | API cost summary |
+| Command | Description |
+|---------|-------------|
+| `/plan <description>` | Start a planning session — spawns planner panel, then orchestrates execution |
+| `/panel <agent> <task>` | Spawn any agent as a panel (e.g., `/panel scout analyze the auth module`) |
+| `/iterate [task]` | Fork session into interactive panel for quick fixes |
+| `/answer` | Extract questions into interactive Q&A |
+| `/todos` | Visual todo manager |
+| `/cost` | API cost summary |
 
-## Tools
+## Packages
 
-| Tool | Source | Description |
-|------|--------|-------------|
-| `claude` | claude-tool extension | Invoke Claude Code for web research, code analysis, or any autonomous task |
-| `execute_command` | execute-command extension | Self-invoke slash commands or send follow-up prompts |
-| `todo` | todos extension | Manage file-based todos (list, create, update, claim, close) |
-| `subagent` | pi-subagents | Delegate tasks to agents with chains and parallel execution |
-| `subagent_status` | pi-subagents | Check async subagent run status |
-| `parallel_search` | pi-parallel | Search the public web with AI-powered search |
-| `parallel_extract` | pi-parallel | Extract clean markdown from external websites |
-| `parallel_research` | pi-parallel | Deep async research synthesizing across many sources |
-| `parallel_enrich` | pi-parallel | Batch-enrich structured data with web-sourced information |
-| `glimpse` | glimpse | Show native macOS UI — dialogs, forms, visualizations, widgets |
-| `cmux_workspace` | pi-cmux | List/create workspaces, split panes, send text to terminals |
-| `cmux_notify` | pi-cmux | Send targeted notifications inside cmux |
+Installed via `pi install`, managed in `settings.json`.
+
+| Package | Description |
+|---------|-------------|
+| [pi-subagents](https://github.com/nicobailon/pi-subagents) | Agent definitions, subagent tool (shared agent `.md` format) |
+| [pi-parallel](https://github.com/HazAT/pi-parallel) | Parallel web search, extract, research, and enrich tools |
+| [pi-smart-sessions](https://github.com/HazAT/pi-smart-sessions) | AI-generated session names |
+| [pi-cmux](https://github.com/sasha-computer/pi-cmux) | cmux integration |
+| [glimpse](https://github.com/HazAT/glimpse) | Native macOS UI — dialogs, forms, visualizations |
+| [chrome-cdp-skill](https://github.com/pasky/chrome-cdp-skill) | Chrome DevTools Protocol CLI for visual testing |
 
 ---
 
 ## Credits
 
-Extensions from [mitsuhiko/agent-stuff](https://github.com/mitsuhiko/agent-stuff): `answer.ts`, `todos.ts`, `review.ts`
+Extensions from [mitsuhiko/agent-stuff](https://github.com/mitsuhiko/agent-stuff): `answer.ts`, `todos.ts`
 
 Skills from [mitsuhiko/agent-stuff](https://github.com/mitsuhiko/agent-stuff): `commit`, `github`
 
 Skills from [getsentry/skills](https://github.com/getsentry/skills): `code-simplifier`
-
-Patterns inspired by [obra/superpowers](https://github.com/obra/superpowers): `brainstorm` skill, core principles
