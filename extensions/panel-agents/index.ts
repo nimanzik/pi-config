@@ -168,23 +168,8 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
         const identity = agentDefs?.body ?? params.systemPrompt ?? null;
         const roleBlock = identity ? `\n\n${identity}` : "";
 
-        // Inject skills inline using the same XML format pi uses.
-        // This renders nicely and doesn't depend on /skill: expansion.
-        let skillPrefix = "";
-        if (effectiveSkills) {
-          for (const skill of effectiveSkills.split(",").map((s) => s.trim()).filter(Boolean)) {
-            const skillPath = resolveSkillPath(skill);
-            if (existsSync(skillPath)) {
-              let content = readFileSync(skillPath, "utf8");
-              // Strip YAML frontmatter
-              content = content.replace(/^---\n[\s\S]*?\n---\n*/, "");
-              skillPrefix += `<skill name="${skill}" location="${skillPath}">\n${content.trim()}\n</skill>\n\n`;
-            }
-          }
-        }
-
         const fullTask =
-          `${skillPrefix}${roleBlock}\n\n${modeHint}\n\n${params.task}\n\n${summaryInstruction}`;
+          `${roleBlock}\n\n${modeHint}\n\n${params.task}\n\n${summaryInstruction}`;
 
         // Build pi command
         const parts: string[] = ["pi"];
@@ -220,9 +205,16 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
         // Write task to a temp file and use @file syntax.
         // Terminal input buffers truncate around 4096 bytes, and agent bodies +
         // skills + task can easily exceed that when passed as a CLI argument.
+        // Skills go as separate /skill:name messages so pi renders them
+        // as proper skill invocation blocks, not buried in the task file.
+        if (effectiveSkills) {
+          for (const skill of effectiveSkills.split(",").map((s) => s.trim()).filter(Boolean)) {
+            parts.push(shellEscape(`/skill:${skill}`));
+          }
+        }
+
         const taskFile = join(tmpdir(), `panel-task-${Date.now()}.md`);
         writeFileSync(taskFile, fullTask, "utf8");
-        // @ must be outside quotes: @'/path/file' not '@/path/file'
         parts.push(`@${taskFile}`);
 
         const piCommand = parts.join(" ");
