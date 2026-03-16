@@ -211,31 +211,31 @@ The `agent` parameter loads defaults from `~/.pi/agent/agents/<name>.md` — sam
 
 ```typescript
 // Use existing agent definitions — same configs as subagents, full transparency
-panel_agent({ name: "Scout", agent: "scout", interactive: false, extensions: "~/.pi/agent/extensions/session-artifacts.ts,~/.pi/agent/extensions/todos.ts", task: "Analyze the codebase..." })
-panel_agent({ name: "Worker", agent: "worker", interactive: false, extensions: "~/.pi/agent/extensions/session-artifacts.ts,~/.pi/agent/extensions/todos.ts", task: "Implement TODO-xxxx..." })
-panel_agent({ name: "Reviewer", agent: "reviewer", interactive: false, extensions: "~/.pi/agent/extensions/session-artifacts.ts", task: "Review feature branch..." })
-panel_agent({ name: "Researcher", agent: "researcher", interactive: false, extensions: "~/.pi/agent/extensions/session-artifacts.ts", task: "Research [topic]..." })
+panel_agent({ name: "Scout", agent: "scout", interactive: false, task: "Analyze the codebase..." })
+panel_agent({ name: "Worker", agent: "worker", interactive: false, task: "Implement TODO-xxxx..." })
+panel_agent({ name: "Reviewer", agent: "reviewer", interactive: false, task: "Review feature branch..." })
+panel_agent({ name: "Researcher", agent: "researcher", interactive: false, task: "Research [topic]..." })
 
-// Planner — interactive, no predefined agent file, custom role
+// Planner — interactive, uses the planner skill for structured brainstorming
 panel_agent({
   name: "Planner",
   interactive: true,
-  tools: "read,bash,edit,write,todo,write_artifact",
-  extensions: "~/.pi/agent/extensions/session-artifacts.ts,~/.pi/agent/extensions/todos.ts,~/.pi/agent/extensions/execute-command.ts,~/.pi/agent/extensions/answer.ts",
-  systemPrompt: "You are the Planner. Clarify requirements, explore approaches, write the plan with write_artifact, create todos, and summarize.",
+  skills: "planner",
   task: "Plan: [description]. Context: [relevant info]"
 })
+
+// Iterate — fork the session for focused work, full context preserved
+panel_agent({ name: "Iterate", interactive: true, fork: true, task: "Fix the bug where..." })
 
 // Override agent defaults when needed
 panel_agent({ name: "Worker", agent: "worker", model: "anthropic/claude-haiku-4-5", task: "Quick fix..." })
 ```
 
-**Required extensions by tool:**
-- `write_artifact` → `~/.pi/agent/extensions/session-artifacts.ts`
-- `todo` → `~/.pi/agent/extensions/todos.ts`
-- `execute_command` + `/answer` → `~/.pi/agent/extensions/execute-command.ts,~/.pi/agent/extensions/answer.ts`
+Panel agents are full pi sessions — all extensions and skills auto-discover. A panel agent can spawn another panel agent (e.g., planner spawns a scout). Agent `.md` files in `~/.pi/agent/agents/` define model, tools, skills, thinking level — same definitions used by subagents.
 
-Always pass the extensions needed for the tools the agent uses. Agent `.md` files define which tools are needed — check `tools:` in the frontmatter.
+**Slash commands:**
+- `/panel <agent> <task>` — spawn a panel agent by agent name (e.g., `/panel scout analyze auth module`)
+- `/iterate [task]` — fork session into interactive panel for quick fixes
 
 **Iterate pattern** — for quick fixes and ad-hoc work after a big implementation. The user branches off into a focused panel, fixes a bug or makes a change, then comes back with just the summary. Keeps the main session's context clean.
 

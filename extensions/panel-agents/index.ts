@@ -32,7 +32,6 @@ const PanelAgentParams = Type.Object({
   model: Type.Optional(Type.String({ description: "Model override (overrides agent default)" })),
   skills: Type.Optional(Type.String({ description: "Comma-separated skills (overrides agent default)" })),
   tools: Type.Optional(Type.String({ description: "Comma-separated tools (overrides agent default)" })),
-  extensions: Type.Optional(Type.String({ description: "Comma-separated extension paths to load" })),
   fork: Type.Optional(Type.Boolean({ description: "Fork the current session — sub-agent gets full conversation context. Use for iterate/bugfix patterns." })),
 });
 
@@ -190,31 +189,11 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
         } else {
           parts.push("--session-dir", shellEscape(dirname(sessionFile)));
         }
-        // Always load panel-done extension so autonomous agents can self-terminate
+        // Always load panel-done on top of whatever extensions auto-discover.
+        // Panel agents are full pi sessions — same extensions, same skills.
+        // This means a panel agent CAN spawn another panel agent (planner → scout).
         const panelDonePath = join(dirname(new URL(import.meta.url).pathname), "panel-done.ts");
-
-        if (params.extensions) {
-          // Explicit extensions: disable discovery, load only what's specified + panel-done
-          parts.push("--no-extensions");
-          parts.push("-e", shellEscape(panelDonePath));
-          for (const ext of params.extensions.split(",").map((s) => s.trim()).filter(Boolean)) {
-            const resolved = ext.startsWith("~") ? join(homedir(), ext.slice(1)) : ext;
-            parts.push("-e", shellEscape(resolved));
-          }
-        } else {
-          // No extensions specified: let auto-discovery run (full session replica)
-          // Just add panel-done on top
-          parts.push("-e", shellEscape(panelDonePath));
-        }
-
-        if (effectiveSkills) {
-          // Explicit skills: disable discovery, load via /skill:name in the message
-          parts.push("--no-skills");
-        } else if (params.agent) {
-          // Agent specified but no skills in its definition: disable discovery
-          parts.push("--no-skills");
-        }
-        // No skills AND no agent: let auto-discovery run (full session replica)
+        parts.push("-e", shellEscape(panelDonePath));
 
         if (effectiveModel) {
           const model = effectiveThinking
@@ -426,12 +405,40 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
     description: "Fork session into an interactive panel for focused work (bugfixes, iteration)",
     handler: async (args, ctx) => {
       const task = args?.trim() || "";
-
-      // Send a user message that triggers panel_agent with fork
       const toolCall = task
         ? `Use panel_agent to start an interactive iterate session. fork: true, name: "Iterate", task: ${JSON.stringify(task)}`
         : `Use panel_agent to start an interactive iterate session. fork: true, name: "Iterate", task: "The user wants to do some hands-on work. Help them with whatever they need."`;
+      pi.sendUserMessage(toolCall);
+    },
+  });
 
+  // /panel command — spawn a panel agent by name
+  // Usage: /panel scout "analyze the codebase"
+  //        /panel worker "implement TODO-xxxx"
+  //        /panel planner "plan the auth system"
+  pi.registerCommand("panel", {
+    description: "Spawn a panel agent: /panel <agent> <task>",
+    handler: async (args, ctx) => {
+      const trimmed = (args ?? "").trim();
+      if (!trimmed) {
+        ctx.ui.notify("Usage: /panel <agent> [task]", "warning");
+        return;
+      }
+
+      // Parse: first word is agent name, rest is task
+      const spaceIdx = trimmed.indexOf(" ");
+      const agentName = spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx);
+      const task = spaceIdx === -1 ? "" : trimmed.slice(spaceIdx + 1).trim();
+
+      // Check if agent definition exists
+      const defs = loadAgentDefaults(agentName);
+      if (!defs) {
+        ctx.ui.notify(`Agent "${agentName}" not found in ~/.pi/agent/agents/ or .pi/agents/`, "error");
+        return;
+      }
+
+      const taskText = task || `You are the ${agentName} agent. Wait for instructions.`;
+      const toolCall = `Use panel_agent with agent: "${agentName}", name: "${agentName[0].toUpperCase() + agentName.slice(1)}", interactive: false, task: ${JSON.stringify(taskText)}`;
       pi.sendUserMessage(toolCall);
     },
   });

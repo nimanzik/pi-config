@@ -52,7 +52,6 @@ panel_agent({
   name: "Scout",
   agent: "scout",
   interactive: false,
-  extensions: "~/.pi/agent/extensions/session-artifacts.ts,~/.pi/agent/extensions/todos.ts",
   task: "Analyze the codebase. Map file structure, key modules, patterns, and conventions. Summarize findings concisely for a planning session."
 })
 ```
@@ -71,7 +70,6 @@ panel_agent({
   interactive: true,
   tools: "read,bash,edit,write,todo,write_artifact",
   skills: "planner",
-  extensions: "~/.pi/agent/extensions/session-artifacts.ts,~/.pi/agent/extensions/todos.ts,~/.pi/agent/extensions/execute-command.ts,~/.pi/agent/extensions/answer.ts",
   task: `Plan: [what the user wants to build]
 
 Context from investigation:
@@ -138,7 +136,6 @@ panel_agent({
   name: "Worker",
   agent: "worker",
   interactive: false,
-  extensions: "~/.pi/agent/extensions/session-artifacts.ts,~/.pi/agent/extensions/todos.ts",
   task: "Implement TODO-xxxx. Mark the todo as done. Plan: ..."
 })
 ```
@@ -156,7 +153,7 @@ After all todos are complete:
 subagent({ agent: "reviewer", task: "Review the feature branch against main. Plan: ~/.pi/history/<project>/plans/YYYY-MM-DD-feature.md" })
 
 // Or using panel agent (visible)
-panel_agent({ name: "Reviewer", agent: "reviewer", interactive: false, extensions: "~/.pi/agent/extensions/session-artifacts.ts", task: "Review the feature branch against main. Plan: ..." })
+panel_agent({ name: "Reviewer", agent: "reviewer", interactive: false, task: "Review the feature branch against main. Plan: ..." })
 ```
 
 Triage findings:
