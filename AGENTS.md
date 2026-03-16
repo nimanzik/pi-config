@@ -200,8 +200,7 @@ ls ~/.pi/history/$(basename "$PWD")/research/
 | `worker` | Implements tasks from todos, makes polished commits (always using the `commit` skill), and closes the todo | Sonnet 4.6 |
 | `reviewer` | Reviews code for quality/security | Codex 5.3 |
 | `researcher` | Deep research using parallel.ai tools (web search, extraction, synthesis) + Claude Code for code analysis | Sonnet 4.6 |
-
-**Planning happens in a panel agent** (interactive, human-in-the-loop) — see Panel Agents below.
+| `planner` | Interactive brainstorming and planning — clarifies requirements, explores approaches, writes plans, creates todos | Opus 4.6 (medium thinking) |
 
 #### Panel Agents
 
@@ -216,11 +215,11 @@ panel_agent({ name: "Worker", agent: "worker", interactive: false, task: "Implem
 panel_agent({ name: "Reviewer", agent: "reviewer", interactive: false, task: "Review feature branch..." })
 panel_agent({ name: "Researcher", agent: "researcher", interactive: false, task: "Research [topic]..." })
 
-// Planner — interactive, uses the brainstorm skill for structured planning
+// Planner — interactive, loads config from ~/.pi/agent/agents/planner.md
 panel_agent({
   name: "Planner",
+  agent: "planner",
   interactive: true,
-  skills: "brainstorm",
   task: "Plan: [description]. Context: [relevant info]"
 })
 
@@ -234,6 +233,7 @@ panel_agent({ name: "Worker", agent: "worker", model: "anthropic/claude-haiku-4-
 Panel agents are full pi sessions — all extensions and skills auto-discover. A panel agent can spawn another panel agent (e.g., planner spawns a scout). Agent `.md` files in `~/.pi/agent/agents/` define model, tools, skills, thinking level — same definitions used by subagents.
 
 **Slash commands:**
+- `/plan <what to build>` — start the full planning workflow (investigate → planner panel → execute → review)
 - `/panel <agent> <task>` — spawn a panel agent by agent name (e.g., `/panel scout analyze auth module`)
 - `/iterate [task]` — fork session into interactive panel for quick fixes
 
@@ -301,7 +301,7 @@ Skills provide specialized instructions for specific tasks. Load them when the c
 | When... | Load skill... |
 |---------|---------------|
 | Starting work in a new/unfamiliar project, or asked to learn conventions | `learn-codebase` |
-| User wants to brainstorm / build something significant | `plan` (uses panel agents) or `brainstorm` (inline) |
+| User wants to brainstorm / build something significant | `plan` (uses panel agents) |
 | Making git commits (always — every commit must be polished and descriptive) | `commit` |
 | Starting, stopping, or configuring Docker/OrbStack services | `dev-environment` |
 | Building web components, pages, or frontend interfaces | `frontend-design` |

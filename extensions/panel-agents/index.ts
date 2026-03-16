@@ -419,9 +419,6 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
   });
 
   // /panel command — spawn a panel agent by name
-  // Usage: /panel scout "analyze the codebase"
-  //        /panel worker "implement TODO-xxxx"
-  //        /panel planner "plan the auth system"
   pi.registerCommand("panel", {
     description: "Spawn a panel agent: /panel <agent> <task>",
     handler: async (args, ctx) => {
@@ -431,12 +428,10 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
         return;
       }
 
-      // Parse: first word is agent name, rest is task
       const spaceIdx = trimmed.indexOf(" ");
       const agentName = spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx);
       const task = spaceIdx === -1 ? "" : trimmed.slice(spaceIdx + 1).trim();
 
-      // Check if agent definition exists
       const defs = loadAgentDefaults(agentName);
       if (!defs) {
         ctx.ui.notify(`Agent "${agentName}" not found in ~/.pi/agent/agents/ or .pi/agents/`, "error");
@@ -446,6 +441,28 @@ export default function panelAgentsExtension(pi: ExtensionAPI) {
       const taskText = task || `You are the ${agentName} agent. Wait for instructions.`;
       const toolCall = `Use panel_agent with agent: "${agentName}", name: "${agentName[0].toUpperCase() + agentName.slice(1)}", interactive: false, task: ${JSON.stringify(taskText)}`;
       pi.sendUserMessage(toolCall);
+    },
+  });
+
+  // /plan command — start the full planning workflow
+  pi.registerCommand("plan", {
+    description: "Start a planning session: /plan <what to build>",
+    handler: async (args, ctx) => {
+      const task = (args ?? "").trim();
+      if (!task) {
+        ctx.ui.notify("Usage: /plan <what to build>", "warning");
+        return;
+      }
+
+      // Load the plan skill and send it as a user message
+      const planSkillPath = resolveSkillPath("plan");
+      if (existsSync(planSkillPath)) {
+        let content = readFileSync(planSkillPath, "utf8");
+        content = content.replace(/^---\n[\s\S]*?\n---\n*/, "");
+        pi.sendUserMessage(`<skill name="plan" location="${planSkillPath}">\n${content.trim()}\n</skill>\n\n${task}`);
+      } else {
+        pi.sendUserMessage(`Use the plan skill to plan: ${task}`);
+      }
     },
   });
 }

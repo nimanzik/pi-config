@@ -62,13 +62,13 @@ Read the scout's summary from the panel result before proceeding.
 
 ## Phase 2: Spawn Planner Panel
 
-Spawn the interactive planner. The `brainstorm` skill guides the full brainstorming workflow — clarify requirements, explore approaches, validate design, write plan, create todos.
+Spawn the interactive planner. The `planner` agent definition has the full brainstorming workflow built in — clarify, explore, validate design, write plan, create todos.
 
 ```typescript
 panel_agent({
   name: "Planner",
+  agent: "planner",
   interactive: true,
-  skills: "brainstorm",
   task: `Plan: [what the user wants to build]
 
 Context from investigation:
