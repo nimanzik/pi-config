@@ -258,7 +258,7 @@ subagent({
 
 #### When to Delegate
 
-- **Todos ready to execute** → Spawn `scout` then `worker` agents
+- **Todos ready to execute** → Spawn `scout` then `worker` agents. **If the project defines a specialized agent** (e.g. `fullstack` for a web project), prefer it over generic `worker` — it has project-specific context, docs references, and often a stronger model.
 - **Code review needed** → Delegate to `reviewer`
 - **Need context first** → Start with `scout`
 - **Web research or external info needed** → Delegate to `researcher` (uses parallel.ai tools for web, Claude Code for code analysis)

@@ -65,6 +65,7 @@ todo(action: "claim", id: "TODO-xxxx")
 Before marking done:
 - Run tests or verify the feature works
 - Check for regressions
+- **For integration/framework changes** (new hooks, decorators, state management, API changes): start the dev server and hit the actual endpoint or load the page. Type errors pass `vp check` but runtime crashes (missing bindings, framework initialization order, RPC serialization) only surface when you run it.
 
 ### 5. Commit
 

@@ -107,6 +107,10 @@ Flag issues that:
 3. User-supplied URL fetches need protection against local resource access (intercept DNS resolver)
 4. Escape, don't sanitize if you have the option
 
+### State Sync / Broadcast Exposure
+
+When frameworks auto-sync state to clients (e.g. Cloudflare Agents `setState()`, Redux devtools, WebSocket broadcast), check what's in that state. Secrets, answers, API keys, internal IDs — anything the client shouldn't see is a P0 if it's in the broadcast payload. The developer may not realize the framework sends the full object.
+
 ### Review Priorities
 
 1. Call out newly added dependencies explicitly
@@ -121,7 +125,7 @@ Flag issues that:
 
 The bar for flagging is HIGH. Ask: "Will this actually cause a real problem?"
 
-- **[P0]** — Drop everything. Will break production, lose data, or create a security hole. Must be provable.
+- **[P0]** — Drop everything. Will break production, lose data, or create a security hole. Must be provable. **Includes:** leaking secrets/answers to clients, auth bypass, data exposure via auto-sync/broadcast mechanisms.
 - **[P1]** — Genuine foot gun. Someone WILL trip over this and waste hours.
 - **[P2]** — Worth mentioning. Real improvement, but code works without it.
 - **[P3]** — Almost irrelevant.
