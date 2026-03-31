@@ -181,19 +181,25 @@ After writing: "Plan is written. Ready to create the todos, or anything to adjus
 
 ## Phase 6: Create Todos
 
+**Before writing any todos, load the `write-todos` skill** — it defines the required structure, rules, and checklist for writing todos that workers can execute without losing architectural intent.
+
 After the plan is confirmed, break it into bite-sized todos (2-5 minutes each).
 
 ```
 todo(action: "create", title: "Task 1: [description]", tags: ["plan-name"], body: "...")
 ```
 
-**Each todo body includes:**
+**Follow the `write-todos` skill for todo structure.** Every todo must include:
 - Plan artifact path
-- What needs to be done
+- Explicit constraints (repeat architectural decisions — don't assume workers read the plan prose)
 - Files to create/modify
-- Acceptance criteria
+- Code examples showing expected shape (imports, patterns, structure)
+- Named anti-patterns ("do NOT use X")
+- Verifiable acceptance criteria
 
 **Each todo should be independently implementable** — a worker picks it up without needing to read all other todos. Include file paths, note conventions, sequence them so each builds on the last.
+
+**Run the `write-todos` checklist before creating.** Verify that every architectural decision from the plan appears as an explicit constraint in at least one todo, and that every todo has a code example.
 
 ---
 
